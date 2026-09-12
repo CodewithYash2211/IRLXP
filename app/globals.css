@@ -1,0 +1,334 @@
+/* =============================================================================
+   IRLXP — Design System
+   The game's visual language lives here: color tokens, typography, animations.
+   ============================================================================= */
+
+/* ─── @import rules must come first ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* ─── CSS Custom Properties (Design Tokens) ────────────────────────────────── */
+:root {
+  /* Core palette */
+  --bg-deepest:   #0a0a0f;
+  --bg-deep:      #0f0f1a;
+  --bg-surface:   #14141f;
+  --bg-elevated:  #1c1c2e;
+  --bg-panel:     #22223a;
+  --bg-card:      #1a1a2e;
+
+  /* Brand / accent */
+  --gold:         #f5c842;
+  --gold-dim:     #a88a1a;
+  --gold-glow:    rgba(245, 200, 66, 0.2);
+
+  /* XP / progression */
+  --xp-bar:       #7c3aed;
+  --xp-glow:      rgba(124, 58, 237, 0.4);
+  --xp-fill:      #a855f7;
+
+  /* Attribute colors */
+  --intellect:    #60a5fa;   /* blue */
+  --strength:     #f87171;   /* red */
+  --discipline:   #34d399;   /* green */
+  --vitality:     #fb7185;   /* pink */
+
+  /* Text */
+  --text-primary:   #f0f0ff;
+  --text-secondary: #8888aa;
+  --text-muted:     #555577;
+  --text-gold:      #f5c842;
+
+  /* Rarity */
+  --rarity-common:    #94a3b8;
+  --rarity-rare:      #60a5fa;
+  --rarity-epic:      #c084fc;
+  --rarity-legendary: #f5c842;
+
+  /* UI borders */
+  --border:       rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.12);
+  --border-gold:  rgba(245, 200, 66, 0.3);
+
+  /* Pixel font */
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-body:  'Inter', -apple-system, sans-serif;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Transitions */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   400ms ease;
+}
+
+/* ─── Base reset ────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-deepest);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Remove default focus ring — we supply our own */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Consistent accessible focus style */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Typography helpers ─────────────────────────────────────────────────────── */
+.font-pixel {
+  font-family: var(--font-pixel);
+  letter-spacing: 0.05em;
+  line-height: 1.6;
+}
+
+.text-gold  { color: var(--text-gold); }
+.text-xp    { color: var(--xp-fill); }
+.text-muted { color: var(--text-secondary); }
+
+/* ─── Glow utilities ─────────────────────────────────────────────────────────── */
+.glow-gold   { text-shadow: 0 0 12px var(--gold), 0 0 24px var(--gold-dim); }
+.glow-xp     { text-shadow: 0 0 12px var(--xp-fill); }
+.glow-panel  { box-shadow: 0 0 0 1px var(--border), 0 4px 24px rgba(0,0,0,0.4); }
+
+/* ─── Pixel border (retro feel) ─────────────────────────────────────────────── */
+.pixel-border {
+  border: 2px solid var(--border);
+  image-rendering: pixelated;
+}
+
+.pixel-border-gold {
+  border: 2px solid var(--border-gold);
+  box-shadow: 0 0 0 1px rgba(245,200,66,0.1) inset, 0 0 12px var(--gold-glow);
+}
+
+/* ─── XP Bar ────────────────────────────────────────────────────────────────── */
+.xp-bar-track {
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.xp-bar-fill {
+  background: linear-gradient(90deg, var(--xp-bar), var(--xp-fill));
+  box-shadow: 0 0 8px var(--xp-glow);
+  border-radius: 2px;
+  transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Card / Panel variants ─────────────────────────────────────────────────── */
+.game-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+
+.game-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.game-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────── */
+.btn-primary {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 12px rgba(124,58,237,0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(124,58,237,0.5);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #f5c842, #d4a017);
+  color: #0a0a0f;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 12px var(--gold-glow);
+}
+
+.btn-gold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(245,200,66,0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.btn-ghost:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.04);
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-panel);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--xp-bar);
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.8; }
+  50%       { opacity: 1; }
+}
+
+@keyframes xp-fly {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  70%  { opacity: 1; transform: translateY(-40px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.9); }
+}
+
+@keyframes level-up-burst {
+  0%   { transform: scale(0.8); opacity: 0; }
+  50%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pixel-sparkle {
+  0%   { transform: scale(0) rotate(0deg);   opacity: 0; }
+  50%  { transform: scale(1) rotate(180deg); opacity: 1; }
+  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-float    { animation: float 3s ease-in-out infinite; }
+.animate-glow     { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-xp-fly   { animation: xp-fly 1.2s ease-out forwards; }
+.animate-levelup  { animation: level-up-burst 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+.shimmer-text {
+  background: linear-gradient(90deg, var(--gold) 0%, #fff 40%, var(--gold) 60%, #d4a017 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-glow,
+  .animate-xp-fly,
+  .animate-levelup,
+  .shimmer-text,
+  .xp-bar-fill {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ─── Category colors ────────────────────────────────────────────────────────── */
+.category-intellect  { color: var(--intellect); }
+.category-strength   { color: var(--strength); }
+.category-discipline { color: var(--discipline); }
+.category-vitality   { color: var(--vitality); }
+
+.bg-category-intellect  { background: rgba(96,165,250,0.1); border-color: rgba(96,165,250,0.3); }
+.bg-category-strength   { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); }
+.bg-category-discipline { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); }
+.bg-category-vitality   { background: rgba(251,113,133,0.1); border-color: rgba(251,113,133,0.3); }
+
+/* ─── World scene ────────────────────────────────────────────────────────────── */
+.world-sky {
+  background: linear-gradient(180deg, #0a0520 0%, #1a0a3a 40%, #2d1b69 70%, #1f2d6b 100%);
+}
+
+.world-ground {
+  background: linear-gradient(180deg, #1a3a1a 0%, #0f2210 100%);
+}
+
+/* Pixel art star rendering */
+.pixel-star {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ─── Skeleton loading ───────────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-panel) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Toast ─────────────────────────────────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(360px, calc(100vw - 2rem));
+}
