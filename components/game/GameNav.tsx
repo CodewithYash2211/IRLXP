@@ -105,6 +105,16 @@ export function GameNav({ profile }: GameNavProps) {
               </div>
             </div>
 
+            <p className="text-xs">🔥 STREAK {profile.streak_count} {profile.streak_count === 1 ? 'DAY' : 'DAYS'}</p>
+            <dl className="grid grid-cols-2 gap-2 text-[10px]">
+              {(['intellect', 'strength', 'discipline', 'vitality'] as const).map(attribute => (
+                <div key={attribute} style={{ color: `var(--${attribute})` }}>
+                  <dt className="uppercase">{attribute}</dt>
+                  <dd>{profile[attribute]}</dd>
+                </div>
+              ))}
+            </dl>
+
             {/* Username + coins */}
             <div className="flex items-center justify-between">
               <div>

@@ -1,6 +1,7 @@
 -- =============================================================================
 -- IRLXP — Supabase PostgreSQL Schema
 -- Run this in your Supabase SQL Editor.
+-- After this base schema, apply phase6.sql once for Party / Challenges.
 -- =============================================================================
 
 -- ─── Extensions ──────────────────────────────────────────────────────────────

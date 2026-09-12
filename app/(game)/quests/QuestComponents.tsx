@@ -1,15 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import type { Quest, QuestCategory, QuestDifficulty } from '@/types/database'
+import type { QuestCompleteResult } from '@/types/game'
 
 interface QuestComponentsProps {
   initialQuests: Quest[]
 }
 
 export function QuestEngine({ initialQuests }: QuestComponentsProps) {
+  const router = useRouter()
+  const completionLock = useRef(false)
+  const [completingId, setCompletingId] = useState<string | null>(null)
+  const [completionError, setCompletionError] = useState<string | null>(null)
+  const [reward, setReward] = useState<QuestCompleteResult | null>(null)
   const [quests, setQuests] = useState<Quest[]>(initialQuests)
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active')
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -20,12 +27,12 @@ export function QuestEngine({ initialQuests }: QuestComponentsProps) {
   const displayQuests = activeTab === 'active' ? activeQuests : completedQuests
 
   const handleQuestCreated = (newQuest: Quest) => {
-    setQuests([newQuest, ...quests])
+    setQuests(current => [newQuest, ...current])
     setShowCreateForm(false)
   }
 
   const handleQuestUpdated = (updatedQuest: Quest) => {
-    setQuests(quests.map(q => q.id === updatedQuest.id ? updatedQuest : q))
+    setQuests(current => current.map(q => q.id === updatedQuest.id ? updatedQuest : q))
     setEditingQuest(null)
   }
 
@@ -34,26 +41,34 @@ export function QuestEngine({ initialQuests }: QuestComponentsProps) {
     try {
       const res = await fetch(`/api/quests/${questId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete')
-      setQuests(quests.filter(q => q.id !== questId))
+      setQuests(current => current.filter(q => q.id !== questId))
     } catch {
       alert('Failed to delete quest.')
     }
   }
 
   const handleQuestCompleted = async (questId: string) => {
+    if (completionLock.current) return
+    completionLock.current = true
+    setCompletingId(questId)
+    setCompletionError(null)
+    setReward(null)
     try {
       const res = await fetch(`/api/quests/${questId}/complete`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to complete')
-      
-      // We could use the returned data to show rewards, but for Phase 3 we just mark as complete
-      const updatedQuests = quests.map(q => {
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to complete quest.')
+      const result: QuestCompleteResult = data
+      setQuests(current => current.map(q => {
         if (q.id === questId) return { ...q, status: 'completed' as const, completed_at: new Date().toISOString() }
         return q
-      })
-      setQuests(updatedQuests)
-      alert('QUEST COMPLETE!')
-    } catch {
-      alert('Failed to complete quest.')
+      }))
+      setReward(result)
+      router.refresh()
+    } catch (error: unknown) {
+      setCompletionError(error instanceof Error ? error.message : 'Failed to complete quest.')
+    } finally {
+      completionLock.current = false
+      setCompletingId(null)
     }
   }
 
@@ -71,6 +86,32 @@ export function QuestEngine({ initialQuests }: QuestComponentsProps) {
           </Button>
         )}
       </div>
+
+      <div role="status" aria-live="polite" aria-atomic="true">
+        {reward && (
+          <div className="game-panel pixel-border-gold p-4 md:p-6 space-y-3">
+            <h2 className="font-pixel text-sm text-gold">QUEST COMPLETE!</h2>
+            <div className="flex flex-wrap gap-4 font-pixel text-xs text-gold">
+              <span>+{reward.xpEarned} XP</span>
+              <span>+{reward.coinsEarned} COINS</span>
+            </div>
+            <p className="font-pixel text-[10px]" style={{ color: `var(--${reward.attributeAffected})` }}>
+              {reward.attributeAffected.toUpperCase()} +{reward.attrGain}
+            </p>
+            <p className="font-pixel text-[10px]">🔥 STREAK {reward.newStreak} {reward.newStreak === 1 ? 'DAY' : 'DAYS'}</p>
+            {reward.leveledUp && (
+              <div className="text-gold space-y-2">
+                <h3 className="font-pixel text-sm">LEVEL UP!</h3>
+                <p className="font-pixel text-xs">LV {reward.levelBefore} → LV {reward.levelAfter}</p>
+              </div>
+            )}
+            <Button variant="ghost" onClick={() => setReward(null)} className="text-xs">DISMISS</Button>
+          </div>
+        )}
+      </div>
+      {completionError && (
+        <p role="alert" className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded">{completionError}</p>
+      )}
 
       {/* Forms */}
       {showCreateForm && (
@@ -141,10 +182,10 @@ export function QuestEngine({ initialQuests }: QuestComponentsProps) {
                     
                     {quest.status === 'active' && (
                       <div className="flex md:flex-col gap-2">
-                        <Button variant="gold" onClick={() => handleQuestCompleted(quest.id)} className="flex-1 font-pixel text-[9px]">COMPLETE</Button>
+                        <Button variant="gold" disabled={completingId !== null} loading={completingId === quest.id} onClick={() => handleQuestCompleted(quest.id)} className="flex-1 font-pixel text-[9px]">COMPLETE</Button>
                         <div className="flex gap-2">
-                          <Button variant="ghost" onClick={() => setEditingQuest(quest)} className="flex-1 text-[10px]">EDIT</Button>
-                          <Button variant="ghost" onClick={() => handleQuestDeleted(quest.id)} className="flex-1 text-[10px] text-red-400 hover:text-red-300">DEL</Button>
+                          <Button variant="ghost" disabled={completingId === quest.id} onClick={() => setEditingQuest(quest)} className="flex-1 text-[10px]">EDIT</Button>
+                          <Button variant="ghost" disabled={completingId === quest.id} onClick={() => handleQuestDeleted(quest.id)} className="flex-1 text-[10px] text-red-400 hover:text-red-300">DEL</Button>
                         </div>
                       </div>
                     )}
