@@ -14,7 +14,7 @@ export async function POST(req: Request, { params }: RouteContext) {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     const resolvedParams = await params
-
+    console.log('complete route: questId', resolvedParams.id)
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -24,7 +24,7 @@ export async function POST(req: Request, { params }: RouteContext) {
       p_quest_id: resolvedParams.id,
       p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
     })
-
+    console.log('RPC result', { data, error })
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }

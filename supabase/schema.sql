@@ -399,6 +399,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Grant execute permission on the complete_quest RPC
+grant execute on function public.complete_quest(uuid, text) to anon, authenticated;
+
 -- ─── purchase_item ────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.purchase_item(p_item_id UUID)
 RETURNS JSON AS $$
