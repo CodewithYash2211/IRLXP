@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { ToastProvider } from '@/components/providers/ToastProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -17,9 +18,7 @@ export const metadata: Metadata = {
     title: 'IRLXP — Level Up Your Real Life',
     description: 'Turn your everyday goals into RPG quests.',
   },
-  icons: {
-    icon: '/favicon.ico',
-  },
+  icons: { icon: '/favicon.ico' },
 }
 
 export const viewport: Viewport = {
@@ -28,14 +27,14 @@ export const viewport: Viewport = {
   themeColor: '#0a0a0f',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body>
+        <ToastProvider>
+          {children}
+        </ToastProvider>
+      </body>
     </html>
   )
 }
