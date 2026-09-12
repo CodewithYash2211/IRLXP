@@ -98,7 +98,7 @@ CREATE TRIGGER quests_updated_at
 CREATE TABLE IF NOT EXISTS public.quest_completions (
   id                 UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id            UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  quest_id           UUID        NOT NULL REFERENCES public.quests(id) ON DELETE CASCADE,
+  quest_id           UUID        NOT NULL REFERENCES public.quests(id) ON DELETE RESTRICT,
   xp_earned          INTEGER     NOT NULL,
   coins_earned       INTEGER     NOT NULL,
   attribute_affected TEXT        NOT NULL CHECK (attribute_affected IN ('intellect','strength','discipline','vitality')),
@@ -320,16 +320,9 @@ BEGIN
   WHERE id = v_user_id
   FOR UPDATE;
 
-  -- Compute level before
-  v_level_before := FLOOR(
-    CASE WHEN v_profile.total_xp < 100 THEN 1
-         ELSE 1 + POWER((v_profile.total_xp::FLOAT / 100.0), (1.0/1.5))
-    END
-  );
-  -- Simpler: use the threshold formula inverted
-  -- We'll just store level before/after as derived values using the JS formula
-  -- In SQL we approximate: level = 1 + floor((xp/100)^(2/3))
-  -- For accuracy, both before and after values are logged; true level shown in app.
+  -- Approximate level from total XP for history logging.
+  -- Formula: level ≈ 1 + floor((xp/100)^(2/3))  (SQL approximation of the JS getLevelFromXP).
+  -- The authoritative level is always derived in TypeScript; this value is for the record only.
   v_level_before := GREATEST(1,
     1 + FLOOR(POWER(GREATEST(0, v_profile.total_xp)::FLOAT / 100.0, 2.0/3.0))::INTEGER
   );
@@ -464,6 +457,9 @@ BEGIN
   END IF;
 
   SELECT * INTO v_item FROM public.items WHERE id = p_item_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Item not found';
+  END IF;
 
   -- Verify ownership
   IF NOT EXISTS (
