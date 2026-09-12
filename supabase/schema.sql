@@ -34,6 +34,32 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- `CREATE TABLE IF NOT EXISTS` does not update a table from an older app
+-- version. Keep the columns required by the signup trigger present when this
+-- script is re-run against an existing project.
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS display_name TEXT;
+
+-- Repair profiles created before usernames were required. The id suffix keeps
+-- the generated name deterministic and unique enough for this UUID key.
+UPDATE public.profiles
+SET username = 'hero_' || substring(id::text, 1, 8)
+WHERE username IS NULL OR btrim(username) = '';
+
+WITH duplicate_usernames AS (
+  SELECT id, username,
+    row_number() OVER (PARTITION BY username ORDER BY id) AS duplicate_rank
+  FROM public.profiles
+)
+UPDATE public.profiles AS profile
+SET username = profile.username || '_' || substring(profile.id::text, 1, 8)
+FROM duplicate_usernames
+WHERE profile.id = duplicate_usernames.id
+  AND duplicate_usernames.duplicate_rank > 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_username_unique_idx
+  ON public.profiles (username);
+
 -- ─── Auto-update updated_at ──────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
@@ -43,6 +69,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS profiles_updated_at ON public.profiles;
 CREATE TRIGGER profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -50,19 +77,42 @@ CREATE TRIGGER profiles_updated_at
 -- ─── Auto-create profile on signup ──────────────────────────────────────────
 -- Username is passed via raw_user_meta_data.username at signup.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SET search_path = ''
+AS $$
+DECLARE
+  requested_username TEXT;
 BEGIN
+  requested_username := COALESCE(
+    NULLIF(btrim(NEW.raw_user_meta_data->>'username'), ''),
+    'hero_' || substring(NEW.id::text, 1, 8)
+  );
+
   INSERT INTO public.profiles (id, username, display_name)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', 'hero_' || substring(NEW.id::text, 1, 8)),
-    COALESCE(NEW.raw_user_meta_data->>'username', NULL)
-  );
+    requested_username,
+    NULLIF(NEW.raw_user_meta_data->>'username', '')
+  )
+  -- A duplicate display username must not roll back the Auth user creation.
+  -- The selected name remains visible as the display name.
+  ON CONFLICT (username) DO NOTHING;
+
+  IF NOT FOUND THEN
+    INSERT INTO public.profiles (id, username, display_name)
+    VALUES (
+      NEW.id,
+      'hero_' || substring(NEW.id::text, 1, 8),
+      NULLIF(NEW.raw_user_meta_data->>'username', '')
+    );
+  END IF;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE TRIGGER on_auth_user_created
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
@@ -87,6 +137,7 @@ CREATE TABLE IF NOT EXISTS public.quests (
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS quests_updated_at ON public.quests;
 CREATE TRIGGER quests_updated_at
   BEFORE UPDATE ON public.quests
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -195,40 +246,62 @@ ALTER TABLE public.achievements     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.party_members    ENABLE ROW LEVEL SECURITY;
 
+-- The Data API also requires table privileges in addition to RLS policies.
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
+
 -- ─── Profiles ────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Users can read own profile" ON public.profiles;
 CREATE POLICY "Users can read own profile"
   ON public.profiles FOR SELECT
-  USING (auth.uid() = id);
+  TO authenticated
+  USING ((select auth.uid()) = id);
 
+-- Normally the auth trigger creates this row. This policy safely repairs
+-- profiles for users created before that trigger was installed.
+DROP POLICY IF EXISTS "Users can create own profile" ON public.profiles;
+CREATE POLICY "Users can create own profile"
+  ON public.profiles FOR INSERT
+  TO authenticated
+  WITH CHECK ((select auth.uid()) = id);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
-  USING (auth.uid() = id);
--- INSERT handled by trigger (SECURITY DEFINER), no client INSERT policy needed.
+  TO authenticated
+  USING ((select auth.uid()) = id)
+  WITH CHECK ((select auth.uid()) = id);
 
 -- ─── Quests ──────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Users can read own quests" ON public.quests;
 CREATE POLICY "Users can read own quests"
   ON public.quests FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create own quests" ON public.quests;
 CREATE POLICY "Users can create own quests"
   ON public.quests FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own active quests" ON public.quests;
 CREATE POLICY "Users can update own active quests"
   ON public.quests FOR UPDATE
   USING (auth.uid() = user_id AND status = 'active');
 
+DROP POLICY IF EXISTS "Users can delete own active quests" ON public.quests;
 CREATE POLICY "Users can delete own active quests"
   ON public.quests FOR DELETE
   USING (auth.uid() = user_id AND status = 'active');
 
 -- ─── Quest Completions ────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Users can read own completions" ON public.quest_completions;
 CREATE POLICY "Users can read own completions"
   ON public.quest_completions FOR SELECT
   USING (auth.uid() = user_id);
 -- INSERT handled via server RPC (SECURITY DEFINER), not direct client insert.
 
 -- ─── Items (shop catalogue) ──────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Authenticated users can read items" ON public.items;
 CREATE POLICY "Authenticated users can read items"
   ON public.items FOR SELECT
   TO authenticated
@@ -236,35 +309,42 @@ CREATE POLICY "Authenticated users can read items"
 -- No INSERT/UPDATE/DELETE for clients — items are seeded by admin.
 
 -- ─── Inventory ───────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Users can read own inventory" ON public.inventory;
 CREATE POLICY "Users can read own inventory"
   ON public.inventory FOR SELECT
   USING (auth.uid() = user_id);
 -- No direct INSERT/UPDATE/DELETE — handled via server RPC.
 
 -- ─── Achievements ────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Authenticated users can read achievements" ON public.achievements;
 CREATE POLICY "Authenticated users can read achievements"
   ON public.achievements FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Users can read own earned achievements" ON public.user_achievements;
 CREATE POLICY "Users can read own earned achievements"
   ON public.user_achievements FOR SELECT
   USING (auth.uid() = user_id);
 
 -- ─── Party ────────────────────────────────────────────────────────────────────
 -- A user can see relationships where they are either side.
+DROP POLICY IF EXISTS "Users can see own party relationships" ON public.party_members;
 CREATE POLICY "Users can see own party relationships"
   ON public.party_members FOR SELECT
   USING (auth.uid() = user_id OR auth.uid() = friend_id);
 
+DROP POLICY IF EXISTS "Users can send friend requests" ON public.party_members;
 CREATE POLICY "Users can send friend requests"
   ON public.party_members FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update relationships they are part of" ON public.party_members;
 CREATE POLICY "Users can update relationships they are part of"
   ON public.party_members FOR UPDATE
   USING (auth.uid() = user_id OR auth.uid() = friend_id);
 
+DROP POLICY IF EXISTS "Users can remove own party relationships" ON public.party_members;
 CREATE POLICY "Users can remove own party relationships"
   ON public.party_members FOR DELETE
   USING (auth.uid() = user_id OR auth.uid() = friend_id);
@@ -484,6 +564,20 @@ BEGIN
   SET equipped = TRUE
   WHERE user_id = v_user_id AND item_id = p_item_id;
 
-  RETURN json_build_object('success', true);
+  -- Persist avatar appearance to the profile when the item maps to a visible cosmetic.
+  UPDATE public.profiles
+  SET
+    avatar_skin     = CASE WHEN v_item.asset_key LIKE 'skin_%' THEN v_item.asset_key ELSE avatar_skin END,
+    avatar_hair     = CASE WHEN v_item.asset_key LIKE 'hair_%' THEN v_item.asset_key ELSE avatar_hair END,
+    avatar_outfit   = CASE WHEN v_item.asset_key LIKE 'outfit_%' THEN v_item.asset_key ELSE avatar_outfit END,
+    avatar_accessory = CASE WHEN v_item.asset_key LIKE 'acc_%' THEN v_item.asset_key ELSE avatar_accessory END,
+    updated_at      = NOW()
+  WHERE id = v_user_id;
+
+  RETURN json_build_object(
+    'success', true,
+    'category', v_item.category,
+    'assetKey', v_item.asset_key
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

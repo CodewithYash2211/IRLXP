@@ -23,11 +23,38 @@ export default async function GameLayout({
   // Belt-and-suspenders: proxy should have redirected already
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: initialProfile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single<Profile>()
+
+  let profile = initialProfile
+
+  if (profileError && profileError.code === 'PGRST116') {
+    // The profile trigger handles new accounts. Keep this path for accounts
+    // created before the trigger existed, using a collision-proof username.
+    const fallbackUsername = `hero_${user.id.slice(0, 8)}`
+    const { data: createdProfile, error: createError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: user.id,
+          username: fallbackUsername,
+          display_name: user.user_metadata?.username ?? null,
+        },
+        { onConflict: 'id' }
+      )
+      .select('*')
+      .single<Profile>()
+
+    if (createError) {
+      console.error('Profile bootstrap failed:', createError)
+      redirect('/login?error=profile_setup_failed')
+    }
+
+    profile = createdProfile
+  }
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg-deepest)' }}>

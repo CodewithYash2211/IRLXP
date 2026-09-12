@@ -20,6 +20,8 @@ function LoginForm() {
   const [error,    setError]    = useState<string | null>(
     searchParams.get('error') === 'auth_callback_failed'
       ? 'Email confirmation failed. Please try again.'
+      : searchParams.get('error') === 'profile_setup_failed'
+        ? 'We could not load your hero profile. Please try again in a moment.'
       : null
   )
 

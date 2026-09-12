@@ -62,6 +62,10 @@ export default function SignupPage() {
         setErrors({ username: 'That username is already taken. Choose another.' })
       } else if (msg.includes('already registered')) {
         setErrors({ email: 'An account with this email already exists.' })
+      } else if (msg.includes('database error saving new user') || msg.includes('new user')) {
+        setServerError(
+          'Supabase profile setup is incomplete. Run the SQL in supabase/schema.sql in your Supabase SQL editor, then try again.'
+        )
       } else {
         setServerError(authError.message)
       }
