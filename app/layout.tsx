@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { ToastProvider } from '@/components/providers/ToastProvider'
 import './globals.css'
+import { MotionPolicy } from '@/components/game/MotionPolicy'
 
 export const metadata: Metadata = {
   title: 'IRLXP — Level Up Your Real Life',
@@ -31,9 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ToastProvider>
+        <MotionPolicy><ToastProvider>
           {children}
-        </ToastProvider>
+        </ToastProvider></MotionPolicy>
       </body>
     </html>
   )
