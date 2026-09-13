@@ -40,13 +40,11 @@ export interface QuestCompleteResult {
   xpEarned: number
   coinsEarned: number
   attributeAffected: QuestCategory
+  attrGain: number
   levelBefore: number
   levelAfter: number
   leveledUp: boolean
-  newTotalXP: number
-  newCoins: number
   newStreak: number
-  newAttributeValue: number
 }
 
 // ─── Purchase response ───────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, type InputHTMLAttributes } from 'react'
+import { forwardRef, useId, type InputHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -11,7 +11,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, hint, id, ...props }, ref) => {
-    const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-')
+    const generatedId = useId()
+    const inputId = id ?? generatedId
 
     return (
       <div className="flex flex-col gap-1.5">
@@ -27,6 +28,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={error || hint ? `${inputId}-help` : undefined}
           className={cn(
             'w-full px-3 py-2.5 rounded-lg text-sm',
             'border transition-all duration-150 outline-none',
@@ -42,12 +45,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && (
-          <p className="text-xs text-red-400 flex items-center gap-1">
+          <p id={`${inputId}-help`} className="text-xs text-red-400 flex items-center gap-1">
             <span>⚠</span> {error}
           </p>
         )}
         {hint && !error && (
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hint}</p>
+          <p id={`${inputId}-help`} className="text-xs" style={{ color: 'var(--text-muted)' }}>{hint}</p>
         )}
       </div>
     )

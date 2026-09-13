@@ -4,7 +4,6 @@
  */
 
 import type { QuestCategory, QuestDifficulty } from '@/types/database'
-import type { CreateQuestPayload, UpdateQuestPayload } from '@/types/game'
 
 export const VALID_CATEGORIES: QuestCategory[] = ['intellect', 'strength', 'discipline', 'vitality']
 export const VALID_DIFFICULTIES: QuestDifficulty[] = ['easy', 'medium', 'hard', 'epic']

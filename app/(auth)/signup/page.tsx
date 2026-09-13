@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { validateSignup, USERNAME_REGEX } from '@/lib/validation/auth'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { PixelBackground } from '@/components/ui/PixelBackground'
+import { AuthScenery } from '@/components/game/AuthScenery'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -87,22 +87,30 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="relative min-h-screen flex items-center justify-center p-4">
-        <PixelBackground />
-        <div className="relative z-10 w-full max-w-sm text-center">
-          <div className="game-panel pixel-border-gold rounded-xl p-8 space-y-4">
-            <div className="text-4xl">📬</div>
-            <h2 className="font-pixel text-sm text-gold">CHECK YOUR EMAIL</h2>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              We sent a confirmation link to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>.
-              Click it to unlock your adventure.
-            </p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Already confirmed?{' '}
-              <Link href="/login" className="underline" style={{ color: 'var(--xp-fill)' }}>
-                Sign in
-              </Link>
-            </p>
+      <div className="auth-page relative min-h-screen flex items-center justify-center p-4">
+        <AuthScenery />
+        <div className="relative z-10 w-full max-w-md text-center">
+          <div className="relative">
+            <div className="absolute -inset-2 bg-gradient-to-br from-gold/20 via-transparent to-xp-bar/20 rounded-[14px] blur-xl" aria-hidden="true" />
+            <div className="relative game-panel pixel-border-gold rounded-xl p-8 space-y-4">
+              <div className="flex items-center justify-center gap-4 mb-2">
+                <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, var(--gold), transparent)' }} />
+                <span className="font-pixel text-[8px] text-gold tracking-widest">HERO CREATED</span>
+                <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, var(--gold), transparent)' }} />
+              </div>
+              <div className="text-5xl mb-2 animate-float">📬</div>
+              <h2 className="font-pixel text-sm text-gold">CHECK YOUR EMAIL</h2>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                We sent a confirmation link to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>.
+                Click it to unlock your adventure.
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Already confirmed?{' '}
+                <Link href="/login" className="underline" style={{ color: 'var(--xp-fill)' }}>
+                  Sign in
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -110,115 +118,125 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4">
-      <PixelBackground />
+    <div className="auth-page relative min-h-screen flex items-center justify-center p-4">
+      <AuthScenery />
 
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="relative z-10 w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <Link href="/">
-            <h1 className="font-pixel text-xl text-gold glow-gold mb-2 inline-block">
+          <Link href="/" className="block">
+            <h1 className="font-pixel text-xl md:text-2xl text-gold glow-gold mb-2 inline-block">
               IRLXP
             </h1>
           </Link>
           <p className="font-pixel text-[9px] tracking-widest" style={{ color: 'var(--text-muted)' }}>
-            BEGIN YOUR JOURNEY
+            CREATE YOUR HERO
           </p>
         </div>
 
-        {/* Card */}
-        <div className="game-panel pixel-border-gold rounded-xl p-6 space-y-5">
-          <div className="text-center">
-            <h2 className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>
-              Create Your Hero
-            </h2>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-              Your real-life adventure starts here.
-            </p>
-          </div>
-
-          {serverError && (
-            <div
-              className="flex items-start gap-2 px-3 py-2.5 rounded-lg border text-sm"
-              style={{
-                background: 'rgba(239,68,68,0.08)',
-                borderColor: 'rgba(239,68,68,0.3)',
-                color: 'var(--strength)',
-              }}
-              role="alert"
-            >
-              <span>⚠</span>
-              <span>{serverError}</span>
+        {/* RPG-style frame */}
+        <div className="relative">
+          <div className="absolute -inset-2 bg-gradient-to-br from-gold/20 via-transparent to-xp-bar/20 rounded-[14px] blur-xl" aria-hidden="true" />
+          <div className="relative game-panel pixel-border-gold rounded-xl p-6 md:p-8 space-y-6">
+            {/* Top decoration */}
+            <div className="flex items-center justify-center gap-4">
+              <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, var(--gold), transparent)' }} />
+              <span className="font-pixel text-[8px] text-gold tracking-widest">HERO REGISTRY</span>
+              <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, var(--gold), transparent)' }} />
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            <Input
-              label="Username"
-              type="text"
-              autoComplete="username"
-              placeholder="epic_hero_42"
-              value={username}
-              onChange={(e) => {
-                setUsername(e.target.value)
-                validateField('username', e.target.value)
-              }}
-              error={errors.username}
-              hint="3–20 characters: letters, numbers, underscore"
-              required
-              disabled={loading}
-              maxLength={20}
-            />
+            <div className="text-center">
+              <h2 className="font-semibold text-lg md:text-xl" style={{ color: 'var(--text-primary)' }}>
+                Forge Your Legend
+              </h2>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                Every hero begins with a name. What will yours be?
+              </p>
+            </div>
 
-            <Input
-              label="Email"
-              type="email"
-              autoComplete="email"
-              placeholder="hero@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              error={errors.email}
-              required
-              disabled={loading}
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="Min. 8 characters"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                validateField('password', e.target.value)
-              }}
-              error={errors.password}
-              required
-              disabled={loading}
-            />
-
-            <Button
-              type="submit"
-              variant="gold"
-              size="lg"
-              loading={loading}
-              className="w-full font-pixel text-[10px] tracking-widest mt-2"
-            >
-              CREATE HERO →
-            </Button>
-          </form>
-
-          <div className="text-center pt-1">
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Already a hero?{' '}
-              <Link
-                href="/login"
-                className="font-semibold underline underline-offset-2"
-                style={{ color: 'var(--xp-fill)' }}
+            {serverError && (
+              <div
+                className="flex items-start gap-2 px-3 py-2.5 rounded-lg border text-sm animate-xp-fly"
+                style={{
+                  background: 'rgba(239,68,68,0.08)',
+                  borderColor: 'rgba(239,68,68,0.3)',
+                  color: 'var(--strength)',
+                }}
+                role="alert"
               >
-                Enter the realm
-              </Link>
-            </p>
+                <span>⚠</span>
+                <span>{serverError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              <Input
+                label="Username"
+                type="text"
+                autoComplete="username"
+                placeholder="epic_hero_42"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value)
+                  validateField('username', e.target.value)
+                }}
+                error={errors.username}
+                hint="3–20 characters: letters, numbers, underscore"
+                required
+                disabled={loading}
+                maxLength={20}
+              />
+
+              <Input
+                label="Email"
+                type="email"
+                autoComplete="email"
+                placeholder="hero@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                error={errors.email}
+                required
+                disabled={loading}
+              />
+
+              <Input
+                label="Password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Min. 8 characters"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  validateField('password', e.target.value)
+                }}
+                error={errors.password}
+                required
+                disabled={loading}
+              />
+
+              <Button
+                type="submit"
+                variant="gold"
+                size="lg"
+                loading={loading}
+                className="w-full font-pixel text-[10px] tracking-widest mt-2"
+              >
+                CREATE HERO →
+              </Button>
+            </form>
+
+            <div className="text-center pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Already have a hero?{' '}
+                <Link
+                  href="/login"
+                  className="font-semibold underline underline-offset-2"
+                  style={{ color: 'var(--xp-fill)' }}
+                >
+                  Enter the realm
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
 
